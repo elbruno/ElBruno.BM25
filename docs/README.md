@@ -395,14 +395,13 @@ public class KnowledgeBaseSearch
 
 ---
 
-## 📖 Documentation
+## 📖 Next Steps
 
-- 📘 **[Getting Started](./docs/guides/getting-started.md)** — 5-minute walkthrough
-- 🔍 **[Advanced Usage](./docs/guides/advanced-usage.md)** — Tuning, persistence, integration
-- 🏗️ **[Architecture](./docs/architecture/design.md)** — Algorithm deep dive
-- 📚 **[API Reference](./docs/api/index.md)** — Complete API documentation
+- 📘 **[Getting Started](./docs/GETTING_STARTED.md)** — 5-minute walkthrough
+- 🔍 **[Advanced Usage](./docs/ADVANCED_USAGE.md)** — Tuning, persistence, integration
+- 🏗️ **[Architecture](./docs/ARCHITECTURE.md)** — Algorithm deep dive
+- 📚 **[API Reference](./docs/API_REFERENCE.md)** — Complete API documentation
 - 🤝 **[Contributing](./CONTRIBUTING.md)** — Build, test, contribute
-- 📋 **[Changelog](./CHANGELOG.md)** — Version history and release notes
 
 ---
 

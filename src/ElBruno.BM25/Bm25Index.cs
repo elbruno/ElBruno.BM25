@@ -302,12 +302,22 @@ public class Bm25Index<T>
 
             var docCount = docLengthsElem.EnumerateObject().Count();
 
-            var index = new Bm25Index<T>(
-                Enumerable.Range(0, docCount).Select(_ => default(T)!).ToList(),
+            // Create placeholder documents for restoration
+            var placeholderDocs = Enumerable.Range(0, docCount).Select(_ => default(T)!).ToList();
+
+            // Create a temporary empty index to get access to the private fields
+            var tempIndex = new Bm25Index<T>(
+                new List<T>(),
                 _ => "",
                 tokenizer,
                 parameters
             );
+
+            // Restore placeholder documents directly to the _documents list
+            foreach (var placeholderDoc in placeholderDocs)
+            {
+                tempIndex._documents.Add(placeholderDoc);
+            }
 
             // Restore inverted index
             foreach (var termProp in invertedIndexElem.EnumerateObject())
@@ -319,26 +329,34 @@ public class Bm25Index<T>
 
                 foreach (var docProp in termProp.Value.EnumerateObject())
                 {
-                    if (int.TryParse(docProp.Name, out var docIdx) && docIdx < index._documents.Count)
+                    if (int.TryParse(docProp.Name, out var docIdx) && docIdx < tempIndex._documents.Count)
                     {
                         var tf = docProp.Value.GetInt32();
                         if (tf > 0)
-                            docDict[index._documents[docIdx]] = tf;
+                        {
+                            var indexedDoc = tempIndex._documents[docIdx];
+                            if (indexedDoc != null)
+                                docDict[indexedDoc] = tf;
+                        }
                     }
                 }
 
                 if (docDict.Count > 0)
-                    index._invertedIndex[term] = docDict;
+                    tempIndex._invertedIndex[term] = docDict;
             }
 
             // Restore document lengths
             foreach (var docLenProp in docLengthsElem.EnumerateObject())
             {
-                if (int.TryParse(docLenProp.Name, out var docIdx) && docIdx < index._documents.Count)
+                if (int.TryParse(docLenProp.Name, out var docIdx) && docIdx < tempIndex._documents.Count)
                 {
                     var len = docLenProp.Value.GetInt32();
                     if (len >= 0)
-                        index._docLengths[index._documents[docIdx]] = len;
+                    {
+                        var lenDoc = tempIndex._documents[docIdx];
+                        if (lenDoc != null)
+                            tempIndex._docLengths[lenDoc] = len;
+                    }
                 }
             }
 
@@ -349,11 +367,11 @@ public class Bm25Index<T>
                 {
                     var term = idfProp.Name;
                     if (!string.IsNullOrEmpty(term))
-                        index._idfCache[term] = idfProp.Value.GetDouble();
+                        tempIndex._idfCache[term] = idfProp.Value.GetDouble();
                 }
             }
 
-            return index;
+            return tempIndex;
         }
         catch (FileNotFoundException)
         {
