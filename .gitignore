@@ -1,3 +1,21 @@
+# Build
+bin/
+obj/
+*.dll
+*.pdb
+*.exe
+
+# IDEs
+.vscode/
+.vs/
+*.sln.iml
+*.csproj.user
+
+# Test & Coverage
+coverage/
+*.trx
+test-results/
+
 # Squad: ignore runtime state (logs, inbox, sessions)
 .squad/orchestration-log/
 .squad/log/
@@ -5,3 +23,7 @@
 .squad/sessions/
 # Squad: SubSquad activation file (local to this machine)
 .squad-workstream
+
+# OS
+.DS_Store
+Thumbs.db

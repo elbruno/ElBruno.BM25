@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ElBruno.BM25.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+155dd21f8c5a9ed7edb9ab1453d34ca670a2686f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fff5b0ef302175ae6d37b142c574982216b1d86d")]
 [assembly: System.Reflection.AssemblyProductAttribute("ElBruno.BM25.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ElBruno.BM25.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

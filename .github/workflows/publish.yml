@@ -1,0 +1,26 @@
+name: Publish to NuGet
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+      - name: Run tests
+        run: dotnet test --configuration Release --no-build
+      - name: Create NuGet package
+        run: dotnet pack src/ElBruno.BM25/ElBruno.BM25.csproj --configuration Release --output nupkg
+      - name: Publish to NuGet
+        run: dotnet nuget push nupkg/ElBruno.BM25.*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate

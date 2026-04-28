@@ -12,9 +12,11 @@ using System.Reflection;
 
 [assembly: System.Reflection.AssemblyCompanyAttribute("Bruno Capuano")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
-[assembly: System.Reflection.AssemblyDescriptionAttribute("Lightweight, zero-dependency BM25 full-text search for .NET")]
+[assembly: System.Reflection.AssemblyDescriptionAttribute(("Lightweight, zero-dependency BM25 full-text search for .NET. Index millions of do" +
+    "cuments and search in milliseconds. Perfect for RAG systems, knowledge bases, an" +
+    "d hybrid search pipelines."))]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("0.5.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.5.0+155dd21f8c5a9ed7edb9ab1453d34ca670a2686f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.5.0+fff5b0ef302175ae6d37b142c574982216b1d86d")]
 [assembly: System.Reflection.AssemblyProductAttribute("ElBruno.BM25")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ElBruno.BM25")]
 [assembly: System.Reflection.AssemblyVersionAttribute("0.5.0.0")]
