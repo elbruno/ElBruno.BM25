@@ -5,14 +5,23 @@
     <Nullable>enable</Nullable>
     <Version>0.5.0</Version>
     <Authors>Bruno Capuano</Authors>
-    <Description>Lightweight, zero-dependency BM25 full-text search for .NET</Description>
+    <Description>Lightweight, zero-dependency BM25 full-text search for .NET. Index millions of documents and search in milliseconds. Perfect for RAG systems, knowledge bases, and hybrid search pipelines.</Description>
     <PackageProjectUrl>https://github.com/ElBruno/ElBruno.BM25</PackageProjectUrl>
+    <PackageIcon>nuget-icon-128x128.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <License>MIT</License>
     <RepositoryUrl>https://github.com/ElBruno/ElBruno.BM25</RepositoryUrl>
-    <PackageTags>bm25;full-text-search;information-retrieval;nlp;ai</PackageTags>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>bm25;search;full-text;information-retrieval;nlp;rag;hybrid-search;fts;text-search;ranking;ir</PackageTags>
     <PackageId>ElBruno.BM25</PackageId>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DocumentationFile>bin/$(Configuration)/$(TargetFramework)/$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../docs/images/nuget-icon-128x128.png" Pack="true" PackagePath="\" />
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <!-- No external dependencies - pure C# implementation -->
 </Project>
