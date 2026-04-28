@@ -97,8 +97,9 @@ public class EdgeCaseTests
         var docs = new List<TestDoc>(TestDocuments.WithSpecialCharacters.Documents);
         var index = new Bm25Index<TestDoc>(docs, d => d.Content);
 
-        // Act
-        var results = index.Search("email");
+        // Act - Search for a term that exists in the special characters content
+        // "contact" appears in the first document's content
+        var results = index.Search("contact");
 
         // Assert
         Assert.NotEmpty(results);

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("Lightweight, zero-dependency BM25 full-text search for .NET")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("0.5.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.5.0+61b743b465ad890ff36d61d6f7615803344c9862")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.5.0+155dd21f8c5a9ed7edb9ab1453d34ca670a2686f")]
 [assembly: System.Reflection.AssemblyProductAttribute("ElBruno.BM25")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ElBruno.BM25")]
 [assembly: System.Reflection.AssemblyVersionAttribute("0.5.0.0")]

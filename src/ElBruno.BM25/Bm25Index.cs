@@ -259,71 +259,114 @@ public class Bm25Index<T>
     {
         if (filePath == null) throw new ArgumentNullException(nameof(filePath));
 
-        var json = File.ReadAllText(filePath);
-        var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-
-        if (!root.TryGetProperty("version", out var versionElem) || versionElem.GetString() != "v1")
-            throw new InvalidOperationException("Invalid index format or unsupported version");
-
-        var tokenizer = CreateTokenizer(root.GetProperty("tokenizer").GetString());
-        var paramsElem = root.GetProperty("parameters");
-        var parameters = new Bm25Parameters
+        try
         {
-            K1 = paramsElem.GetProperty("k1").GetDouble(),
-            B = paramsElem.GetProperty("b").GetDouble(),
-            Delta = paramsElem.GetProperty("delta").GetDouble()
-        };
-        parameters.SetAvgDocLength(paramsElem.GetProperty("avgDocLength").GetDouble());
-
-        var invertedIndexElem = root.GetProperty("invertedIndex");
-        var docLengthsElem = root.GetProperty("docLengths");
-        var docCount = docLengthsElem.EnumerateObject().Count();
-
-        var index = new Bm25Index<T>(
-            Enumerable.Range(0, docCount).Select(_ => default(T)!).ToList(),
-            _ => "",
-            tokenizer,
-            parameters
-        );
-
-        // Restore inverted index
-        foreach (var termProp in invertedIndexElem.EnumerateObject())
-        {
-            var term = termProp.Name;
-            var docDict = new Dictionary<T, int>();
-
-            foreach (var docProp in termProp.Value.EnumerateObject())
+            var json = File.ReadAllText(filePath);
+            JsonDocument doc;
+            
+            try
             {
-                var docIdx = int.Parse(docProp.Name);
-                var tf = docProp.Value.GetInt32();
-                if (docIdx < index._documents.Count)
+                doc = JsonDocument.Parse(json);
+            }
+            catch (JsonException ex)
+            {
+                throw new JsonException("The index file contains invalid JSON and cannot be parsed.", ex);
+            }
+
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("version", out var versionElem) || versionElem.GetString() != "v1")
+                throw new InvalidOperationException("Invalid index format or unsupported version");
+
+            if (!root.TryGetProperty("tokenizer", out var tokenElem))
+                throw new InvalidOperationException("Index file missing tokenizer information");
+
+            var tokenizer = CreateTokenizer(tokenElem.GetString());
+            
+            if (!root.TryGetProperty("parameters", out var paramsElem))
+                throw new InvalidOperationException("Index file missing parameters");
+
+            var parameters = new Bm25Parameters
+            {
+                K1 = paramsElem.GetProperty("k1").GetDouble(),
+                B = paramsElem.GetProperty("b").GetDouble(),
+                Delta = paramsElem.GetProperty("delta").GetDouble()
+            };
+            parameters.SetAvgDocLength(paramsElem.GetProperty("avgDocLength").GetDouble());
+
+            if (!root.TryGetProperty("invertedIndex", out var invertedIndexElem))
+                throw new InvalidOperationException("Index file missing inverted index");
+
+            if (!root.TryGetProperty("docLengths", out var docLengthsElem))
+                throw new InvalidOperationException("Index file missing document lengths");
+
+            var docCount = docLengthsElem.EnumerateObject().Count();
+
+            var index = new Bm25Index<T>(
+                Enumerable.Range(0, docCount).Select(_ => default(T)!).ToList(),
+                _ => "",
+                tokenizer,
+                parameters
+            );
+
+            // Restore inverted index
+            foreach (var termProp in invertedIndexElem.EnumerateObject())
+            {
+                var term = termProp.Name;
+                if (string.IsNullOrEmpty(term)) continue;
+
+                var docDict = new Dictionary<T, int>();
+
+                foreach (var docProp in termProp.Value.EnumerateObject())
                 {
-                    docDict[index._documents[docIdx]] = tf;
+                    if (int.TryParse(docProp.Name, out var docIdx) && docIdx < index._documents.Count)
+                    {
+                        var tf = docProp.Value.GetInt32();
+                        if (tf > 0)
+                            docDict[index._documents[docIdx]] = tf;
+                    }
+                }
+
+                if (docDict.Count > 0)
+                    index._invertedIndex[term] = docDict;
+            }
+
+            // Restore document lengths
+            foreach (var docLenProp in docLengthsElem.EnumerateObject())
+            {
+                if (int.TryParse(docLenProp.Name, out var docIdx) && docIdx < index._documents.Count)
+                {
+                    var len = docLenProp.Value.GetInt32();
+                    if (len >= 0)
+                        index._docLengths[index._documents[docIdx]] = len;
                 }
             }
 
-            if (docDict.Count > 0)
-                index._invertedIndex[term] = docDict;
-        }
+            // Restore IDF cache
+            if (root.TryGetProperty("idfCache", out var idfCacheElem))
+            {
+                foreach (var idfProp in idfCacheElem.EnumerateObject())
+                {
+                    var term = idfProp.Name;
+                    if (!string.IsNullOrEmpty(term))
+                        index._idfCache[term] = idfProp.Value.GetDouble();
+                }
+            }
 
-        // Restore document lengths
-        foreach (var docLenProp in docLengthsElem.EnumerateObject())
+            return index;
+        }
+        catch (FileNotFoundException)
         {
-            var docIdx = int.Parse(docLenProp.Name);
-            var len = docLenProp.Value.GetInt32();
-            if (docIdx < index._documents.Count)
-                index._docLengths[index._documents[docIdx]] = len;
+            throw;
         }
-
-        // Restore IDF cache
-        if (root.TryGetProperty("idfCache", out var idfCacheElem))
+        catch (JsonException)
         {
-            foreach (var idfProp in idfCacheElem.EnumerateObject())
-                index._idfCache[idfProp.Name] = idfProp.Value.GetDouble();
+            throw;
         }
-
-        return index;
+        catch (Exception ex) when (!(ex is InvalidOperationException))
+        {
+            throw new InvalidOperationException($"Failed to load index from file: {ex.Message}", ex);
+        }
     }
 
     /// <summary>
@@ -477,10 +520,19 @@ public class Bm25Index<T>
     {
         var content = _contentSelector(document) ?? "";
         var tokens = _tokenizer.Tokenize(content);
+        
+        if (tokens == null || tokens.Count == 0)
+        {
+            _docLengths[document] = 0;
+            return;
+        }
+
         var termFreqs = new Dictionary<string, int>();
 
         foreach (var token in tokens)
         {
+            if (string.IsNullOrEmpty(token)) continue;
+
             var normalizedTerm = _caseInsensitive ? _tokenizer.Normalize(token) : token;
             if (!string.IsNullOrEmpty(normalizedTerm))
             {
