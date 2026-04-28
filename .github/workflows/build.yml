@@ -19,8 +19,12 @@ jobs:
         with:
           dotnet-version: ${{ matrix.dotnet-version }}
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore src/ElBruno.BM25/ElBruno.BM25.csproj
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build src/ElBruno.BM25/ElBruno.BM25.csproj --configuration Release --no-restore
+      - name: Restore test dependencies
+        run: dotnet restore tests/ElBruno.BM25.Tests/ElBruno.BM25.Tests.csproj
+      - name: Build tests
+        run: dotnet build tests/ElBruno.BM25.Tests/ElBruno.BM25.Tests.csproj --configuration Release --no-restore
       - name: Run tests
-        run: dotnet test --configuration Release --no-build --verbosity normal
+        run: dotnet test tests/ElBruno.BM25.Tests/ElBruno.BM25.Tests.csproj --configuration Release --no-build --verbosity normal
