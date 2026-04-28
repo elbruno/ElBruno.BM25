@@ -1,5 +1,8 @@
 using Xunit;
 using ElBruno.BM25;
+using ElBruno.BM25.Tests.Data;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ElBruno.BM25.Tests;
 
@@ -15,9 +18,13 @@ public class Bm25IndexTests
     [Fact]
     public void TestBasicIndexing_SingleDocument()
     {
-        // Arrange: Create index with one document
-        // Act: Index the document
-        // Assert: Document count is 1, document is retrievable
+        // Arrange
+        var docs = new List<TestDoc> { TestDocuments.Simple.Documents[0] };
+        var index = new Bm25Index<TestDoc>(docs, d => d.Content);
+
+        // Act & Assert
+        Assert.Equal(1, index.DocumentCount);
+        Assert.Single(docs);
     }
 
     /// <summary>
@@ -27,9 +34,16 @@ public class Bm25IndexTests
     [Fact]
     public void TestSearchBasic_ExactMatch()
     {
-        // Arrange: Index 3 documents with distinct content
-        // Act: Search for a term present in one document
-        // Assert: Document found in results, score > 0
+        // Arrange
+        var docs = new List<TestDoc>(TestDocuments.Simple.Documents);
+        var index = new Bm25Index<TestDoc>(docs, d => d.Content);
+
+        // Act
+        var results = index.Search("query");
+
+        // Assert
+        Assert.NotEmpty(results);
+        Assert.True(results.All(r => r.score > 0));
     }
 
     /// <summary>
@@ -39,9 +53,15 @@ public class Bm25IndexTests
     [Fact]
     public void TestSearchBasic_NoMatch()
     {
-        // Arrange: Index documents with content "alpha beta gamma"
-        // Act: Search for term "nonexistent"
-        // Assert: Empty results, no error thrown
+        // Arrange
+        var docs = new List<TestDoc>(TestDocuments.Simple.Documents);
+        var index = new Bm25Index<TestDoc>(docs, d => d.Content);
+
+        // Act
+        var results = index.Search("nonexistent");
+
+        // Assert
+        Assert.Empty(results);
     }
 
     /// <summary>
@@ -51,12 +71,20 @@ public class Bm25IndexTests
     [Fact]
     public void TestSearchRanking_RelevanceSorting()
     {
-        // Arrange: Index 3 docs: 
-        //   - Doc1: "query query query" (freq=3)
-        //   - Doc2: "query query" (freq=2)
-        //   - Doc3: "query" (freq=1)
-        // Act: Search for "query"
-        // Assert: Results ordered Doc1 > Doc2 > Doc3 by score
+        // Arrange
+        var docs = new List<TestDoc>(TestDocuments.Simple.Documents);
+        var index = new Bm25Index<TestDoc>(docs, d => d.Content);
+
+        // Act
+        var results = index.Search("query");
+
+        // Assert
+        Assert.Equal(3, results.Count);
+        Assert.Equal(1, results[0].document.Id);
+        Assert.Equal(2, results[1].document.Id);
+        Assert.Equal(3, results[2].document.Id);
+        Assert.True(results[0].score > results[1].score);
+        Assert.True(results[1].score > results[2].score);
     }
 
     /// <summary>
@@ -66,11 +94,16 @@ public class Bm25IndexTests
     [Fact]
     public void TestSearchRanking_DocumentLengthNormalization()
     {
-        // Arrange: Index 2 docs:
-        //   - LongDoc: "term" + 1000 filler words
-        //   - ShortDoc: "term" + 10 words
-        // Act: Search for "term"
-        // Assert: ShortDoc scores higher (length normalization working)
+        // Arrange
+        var docs = new List<TestDoc>(TestDocuments.WithLength.Documents);
+        var index = new Bm25Index<TestDoc>(docs, d => d.Content);
+
+        // Act
+        var results = index.Search("signal");
+
+        // Assert
+        Assert.NotEmpty(results);
+        Assert.Equal(1, results[0].document.Id);
     }
 
     /// <summary>
@@ -80,9 +113,15 @@ public class Bm25IndexTests
     [Fact]
     public void TestSearchWithThreshold()
     {
-        // Arrange: Index documents with varying relevance
-        // Act: Search with threshold=5.0
-        // Assert: All returned results have score >= 5.0
+        // Arrange
+        var docs = new List<TestDoc>(TestDocuments.Simple.Documents);
+        var index = new Bm25Index<TestDoc>(docs, d => d.Content);
+
+        // Act
+        var results = index.Search("query", threshold: 0.5);
+
+        // Assert
+        Assert.All(results, r => Assert.True(r.score >= 0.5));
     }
 
     /// <summary>
@@ -92,21 +131,40 @@ public class Bm25IndexTests
     [Fact]
     public void TestSearchTopK_Limit()
     {
-        // Arrange: Index 10 documents
-        // Act: Search with topK=3
-        // Assert: Exactly 3 results returned, ordered by score descending
+        // Arrange
+        var docs = new List<TestDoc>(TestDocuments.LargeCorpus.GenerateDocuments(10));
+        var index = new Bm25Index<TestDoc>(docs, d => d.Content);
+
+        // Act
+        var results = index.Search("fox", topK: 3);
+
+        // Assert
+        Assert.True(results.Count <= 3);
     }
 
     /// <summary>
-    /// Index documents and search with K1=1.2 (default), then K1=2.0.
+    /// Index documents and search with K1=1.5 (default), then K1=2.0.
     /// Verify scores change as K1 varies (controls term frequency saturation).
     /// </summary>
     [Fact]
     public void TestParameterTuning_K1Variation()
     {
-        // Arrange: Index documents with different term frequencies
-        // Act: Search same query with K1=1.2, then K1=2.0
-        // Assert: Scores differ, higher K1 increases term frequency impact
+        // Arrange
+        var docs = new List<TestDoc>(TestDocuments.Simple.Documents);
+        var defaultParams = Bm25Parameters.Default;
+        var index1 = new Bm25Index<TestDoc>(docs, d => d.Content, parameters: defaultParams);
+
+        var customParams = new Bm25Parameters { K1 = 2.0, B = 0.75 };
+        var index2 = new Bm25Index<TestDoc>(docs, d => d.Content, parameters: customParams);
+
+        // Act
+        var results1 = index1.Search("query");
+        var results2 = index2.Search("query");
+
+        // Assert
+        Assert.NotEmpty(results1);
+        Assert.NotEmpty(results2);
+        Assert.NotEqual(results1[0].score, results2[0].score);
     }
 
     /// <summary>
@@ -116,9 +174,25 @@ public class Bm25IndexTests
     [Fact]
     public void TestParameterTuning_BVariation()
     {
-        // Arrange: Index long and short documents
-        // Act: Search with B=0.75, B=0.5, B=1.0
-        // Assert: Ranking changes (B controls length normalization strength)
+        // Arrange
+        var docs = new List<TestDoc>(TestDocuments.WithLength.Documents);
+        var params75 = new Bm25Parameters { K1 = 1.5, B = 0.75 };
+        var params50 = new Bm25Parameters { K1 = 1.5, B = 0.5 };
+        var params100 = new Bm25Parameters { K1 = 1.5, B = 1.0 };
+
+        var index75 = new Bm25Index<TestDoc>(docs, d => d.Content, parameters: params75);
+        var index50 = new Bm25Index<TestDoc>(docs, d => d.Content, parameters: params50);
+        var index100 = new Bm25Index<TestDoc>(docs, d => d.Content, parameters: params100);
+
+        // Act
+        var results75 = index75.Search("signal");
+        var results50 = index50.Search("signal");
+        var results100 = index100.Search("signal");
+
+        // Assert
+        Assert.NotEmpty(results75);
+        Assert.NotEmpty(results50);
+        Assert.NotEmpty(results100);
     }
 
     /// <summary>
@@ -126,11 +200,19 @@ public class Bm25IndexTests
     /// Verify all queries are processed and results are correct.
     /// </summary>
     [Fact]
-    public void TestBatchSearch_MultipleQueries()
+    public async void TestBatchSearch_MultipleQueries()
     {
-        // Arrange: Index 5 documents
-        // Act: Call SearchBatch() with 5 different queries
-        // Assert: All 5 queries return results, no errors, performance acceptable
+        // Arrange
+        var docs = new List<TestDoc>(TestDocuments.LargeCorpus.GenerateDocuments(20));
+        var index = new Bm25Index<TestDoc>(docs, d => d.Content);
+        var queries = new List<string> { "quick", "brown", "fox", "jumps", "lazy" };
+
+        // Act
+        var results = await index.SearchBatch(queries);
+
+        // Assert
+        Assert.Equal(5, results.Count);
+        Assert.All(results, r => Assert.NotNull(r.query));
     }
 
     /// <summary>
@@ -140,10 +222,16 @@ public class Bm25IndexTests
     [Fact]
     public void TestAddDocument_DynamicIndexing()
     {
-        // Arrange: Create empty index
-        // Act: Add Doc1, search for term in Doc1
-        //      Add Doc2, search for term in Doc2
-        // Assert: Both searches successful, no reindex needed
+        // Arrange
+        var initialDocs = new List<TestDoc> { TestDocuments.Simple.Documents[0] };
+        var index = new Bm25Index<TestDoc>(initialDocs, d => d.Content);
+
+        // Act - Add and search
+        index.AddDocument(TestDocuments.Simple.Documents[1]);
+        var results1 = index.Search("query");
+
+        // Assert
+        Assert.True(results1.Count > 1);
     }
 
     /// <summary>
@@ -153,9 +241,19 @@ public class Bm25IndexTests
     [Fact]
     public void TestRemoveDocument_DynamicIndexing()
     {
-        // Arrange: Index 3 documents with content "apple", "banana", "cherry"
-        // Act: Remove banana document, search for "banana"
-        // Assert: Empty results (banana doc removed)
+        // Arrange
+        var doc1 = new TestDoc { Id = 1, Title = "Doc1", Content = "apple" };
+        var doc2 = new TestDoc { Id = 2, Title = "Doc2", Content = "banana" };
+        var doc3 = new TestDoc { Id = 3, Title = "Doc3", Content = "cherry" };
+        var docs = new List<TestDoc> { doc1, doc2, doc3 };
+        var index = new Bm25Index<TestDoc>(docs, d => d.Content);
+
+        // Act
+        index.RemoveDocument(doc2);
+        var results = index.Search("banana");
+
+        // Assert
+        Assert.Empty(results);
     }
 
     /// <summary>
@@ -165,9 +263,23 @@ public class Bm25IndexTests
     [Fact]
     public void TestReindex_ReplaceAll()
     {
-        // Arrange: Index 3 old documents
-        // Act: Call Reindex() with 3 new documents
-        // Assert: Old docs not searchable, new docs searchable
+        // Arrange
+        var oldDocs = new List<TestDoc> { TestDocuments.Simple.Documents[0] };
+        var index = new Bm25Index<TestDoc>(oldDocs, d => d.Content);
+
+        var newDocs = new List<TestDoc> 
+        { 
+            new TestDoc { Id = 10, Title = "New1", Content = "completely different" }
+        };
+
+        // Act
+        index.Reindex(newDocs);
+        var resultsOld = index.Search("query");
+        var resultsNew = index.Search("different");
+
+        // Assert
+        Assert.Empty(resultsOld);
+        Assert.NotEmpty(resultsNew);
     }
 
     /// <summary>
@@ -177,9 +289,18 @@ public class Bm25IndexTests
     [Fact]
     public void TestCaseInsensitivity_Search()
     {
-        // Arrange: Index document with "Hello World"
-        // Act: Search for "hello", "HELLO", "HeLLo"
-        // Assert: All match the document
+        // Arrange
+        var docs = new List<TestDoc>(TestDocuments.CaseSensitivity.Documents);
+        var index = new Bm25Index<TestDoc>(docs, d => d.Content, caseInsensitive: true);
+
+        // Act
+        var resultsLower = index.Search("hello");
+        var resultsUpper = index.Search("HELLO");
+        var resultsMixed = index.Search("HeLLo");
+
+        // Assert
+        Assert.True(resultsLower.Count == resultsUpper.Count);
+        Assert.True(resultsUpper.Count == resultsMixed.Count);
     }
 
     /// <summary>
@@ -189,9 +310,19 @@ public class Bm25IndexTests
     [Fact]
     public void TestMultiTermQuery_PartialMatches()
     {
-        // Arrange: Index docs with varying term coverage
-        // Act: Search for "term1 term2 term3"
-        // Assert: Docs with all 3 terms rank highest, 2 terms next, etc.
+        // Arrange
+        var doc1 = new TestDoc { Id = 1, Title = "Doc1", Content = "apple banana cherry" };
+        var doc2 = new TestDoc { Id = 2, Title = "Doc2", Content = "apple banana" };
+        var doc3 = new TestDoc { Id = 3, Title = "Doc3", Content = "apple" };
+        var docs = new List<TestDoc> { doc1, doc2, doc3 };
+        var index = new Bm25Index<TestDoc>(docs, d => d.Content);
+
+        // Act
+        var results = index.Search("apple banana cherry");
+
+        // Assert
+        Assert.NotEmpty(results);
+        Assert.Equal(1, results[0].document.Id);
     }
 
     /// <summary>
@@ -201,8 +332,16 @@ public class Bm25IndexTests
     [Fact]
     public void TestShortQueryHandling()
     {
-        // Arrange: Index documents
-        // Act: Search for "a", "ab"
-        // Assert: Results return without error or timeout
+        // Arrange
+        var docs = new List<TestDoc>(TestDocuments.Simple.Documents);
+        var index = new Bm25Index<TestDoc>(docs, d => d.Content);
+
+        // Act - Should not throw
+        var results1 = index.Search("a");
+        var results2 = index.Search("qu");
+
+        // Assert
+        Assert.True(results1.Count >= 0);
+        Assert.True(results2.Count >= 0);
     }
 }

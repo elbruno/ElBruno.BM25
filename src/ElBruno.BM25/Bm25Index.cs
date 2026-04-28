@@ -276,16 +276,18 @@ public class Bm25Index<T>
         };
         parameters.SetAvgDocLength(paramsElem.GetProperty("avgDocLength").GetDouble());
 
+        var invertedIndexElem = root.GetProperty("invertedIndex");
+        var docLengthsElem = root.GetProperty("docLengths");
+        var docCount = docLengthsElem.EnumerateObject().Count();
+
         var index = new Bm25Index<T>(
-            new List<T>(),
+            Enumerable.Range(0, docCount).Select(_ => default(T)!).ToList(),
             _ => "",
             tokenizer,
             parameters
         );
 
-        var invertedIndexElem = root.GetProperty("invertedIndex");
-        var docLengthsElem = root.GetProperty("docLengths");
-
+        // Restore inverted index
         foreach (var termProp in invertedIndexElem.EnumerateObject())
         {
             var term = termProp.Name;
@@ -296,12 +298,16 @@ public class Bm25Index<T>
                 var docIdx = int.Parse(docProp.Name);
                 var tf = docProp.Value.GetInt32();
                 if (docIdx < index._documents.Count)
+                {
                     docDict[index._documents[docIdx]] = tf;
+                }
             }
 
-            index._invertedIndex[term] = docDict;
+            if (docDict.Count > 0)
+                index._invertedIndex[term] = docDict;
         }
 
+        // Restore document lengths
         foreach (var docLenProp in docLengthsElem.EnumerateObject())
         {
             var docIdx = int.Parse(docLenProp.Name);
@@ -310,6 +316,7 @@ public class Bm25Index<T>
                 index._docLengths[index._documents[docIdx]] = len;
         }
 
+        // Restore IDF cache
         if (root.TryGetProperty("idfCache", out var idfCacheElem))
         {
             foreach (var idfProp in idfCacheElem.EnumerateObject())

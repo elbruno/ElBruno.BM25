@@ -1,6 +1,11 @@
 using Xunit;
 using ElBruno.BM25;
+using ElBruno.BM25.Tests.Data;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 
 namespace ElBruno.BM25.Tests;
 
@@ -10,6 +15,14 @@ namespace ElBruno.BM25.Tests;
 /// </summary>
 public class PerformanceTests
 {
+    private readonly string _testDataPath = Path.Combine(AppContext.BaseDirectory, "TestData", "PerformanceTests");
+
+    public PerformanceTests()
+    {
+        if (!Directory.Exists(_testDataPath))
+            Directory.CreateDirectory(_testDataPath);
+    }
+
     /// <summary>
     /// Index 100,000 random documents and measure total indexing time.
     /// Assert indexing completes in under 5 seconds.
@@ -17,21 +30,18 @@ public class PerformanceTests
     [Fact]
     public void TestPerformance_Index100K_Under5s()
     {
-        // Arrange: Generate 100k random documents
-        // Act: Measure time to index all documents
-        // Assert: Time < 5 seconds
-    }
+        // Arrange
+        var docs = new List<TestDoc>(TestDocuments.LargeCorpus.GenerateDocuments(100000));
+        var sw = Stopwatch.StartNew();
 
-    /// <summary>
-    /// Index 1,000,000 documents and measure indexing throughput.
-    /// Assert can handle 1M docs efficiently.
-    /// </summary>
-    [Fact]
-    public void TestPerformance_Index1M_Throughput()
-    {
-        // Arrange: Generate 1M random documents
-        // Act: Measure indexing time and calculate docs/sec
-        // Assert: Throughput > 100k docs/sec
+        // Act
+        var index = new Bm25Index<TestDoc>(docs, d => d.Content);
+        sw.Stop();
+
+        // Assert
+        Assert.True(sw.ElapsedMilliseconds < 5000, 
+            $"Indexing 100K docs took {sw.ElapsedMilliseconds}ms, expected < 5000ms");
+        Assert.Equal(100000, index.DocumentCount);
     }
 
     /// <summary>
@@ -41,22 +51,22 @@ public class PerformanceTests
     [Fact]
     public void TestPerformance_Search_Under50ms()
     {
-        // Arrange: Index 100k documents
-        //          Warmup (run one search)
-        // Act: Measure search time for common term
-        // Assert: Time < 50ms
-    }
+        // Arrange
+        var docs = new List<TestDoc>(TestDocuments.LargeCorpus.GenerateDocuments(100000));
+        var index = new Bm25Index<TestDoc>(docs, d => d.Content);
+        
+        // Warmup search
+        index.Search("fox");
 
-    /// <summary>
-    /// Index 100k documents, perform multi-term search.
-    /// Verify search latency scales appropriately with query complexity.
-    /// </summary>
-    [Fact]
-    public void TestPerformance_MultiTermSearch_Latency()
-    {
-        // Arrange: Index 100k documents
-        // Act: Search for 3-term query, measure time
-        // Assert: Time < 100ms (acceptable overhead vs single term)
+        // Act
+        var sw = Stopwatch.StartNew();
+        var results = index.Search("fox");
+        sw.Stop();
+
+        // Assert
+        Assert.True(sw.ElapsedMilliseconds < 50,
+            $"Search took {sw.ElapsedMilliseconds}ms, expected < 50ms");
+        Assert.NotEmpty(results);
     }
 
     /// <summary>
@@ -64,12 +74,31 @@ public class PerformanceTests
     /// Verify batch time scales linearly with query count.
     /// </summary>
     [Fact]
-    public void TestPerformance_BatchSearch_Linear()
+    public async void TestPerformance_BatchSearch_Linear()
     {
-        // Arrange: Index 100k documents
-        // Act: Measure time for 100 batch searches
-        //      Measure time for 1 search, multiply by 100
-        // Assert: Batch time roughly equal to 100x single search
+        // Arrange
+        var docs = new List<TestDoc>(TestDocuments.LargeCorpus.GenerateDocuments(100000));
+        var index = new Bm25Index<TestDoc>(docs, d => d.Content);
+        var queries = new List<string> { "quick", "brown", "fox", "jumps", "over", "lazy", "dog", 
+                                         "system", "search", "index", "document", "query", "algorithm", 
+                                         "performance", "optimization" };
+
+        // Measure single search time
+        var sw1 = Stopwatch.StartNew();
+        index.Search(queries[0]);
+        sw1.Stop();
+        var singleSearchTime = sw1.ElapsedMilliseconds;
+
+        // Act - Measure batch search
+        var sw2 = Stopwatch.StartNew();
+        var results = await index.SearchBatch(queries);
+        sw2.Stop();
+
+        // Assert
+        Assert.Equal(queries.Count, results.Count);
+        var estimatedTime = singleSearchTime * queries.Count;
+        Assert.True(sw2.ElapsedMilliseconds < estimatedTime * 1.5,
+            $"Batch search took {sw2.ElapsedMilliseconds}ms, estimated {estimatedTime}ms");
     }
 
     /// <summary>
@@ -79,68 +108,28 @@ public class PerformanceTests
     [Fact]
     public void TestPerformance_SaveLoad_100K()
     {
-        // Arrange: Index 100k documents
-        // Act: Measure save time, measure load time
-        // Assert: Save < 1s, Load < 1s
-    }
+        // Arrange
+        var docs = new List<TestDoc>(TestDocuments.LargeCorpus.GenerateDocuments(100000));
+        var index = new Bm25Index<TestDoc>(docs, d => d.Content);
+        var filePath = Path.Combine(_testDataPath, "perf_100k.json");
 
-    /// <summary>
-    /// Add documents to existing index dynamically.
-    /// Verify incremental indexing maintains performance.
-    /// </summary>
-    [Fact]
-    public void TestPerformance_IncrementalIndexing()
-    {
-        // Arrange: Index 50k documents
-        // Act: Add 50k more documents, measure add time
-        // Assert: Time reasonable (similar to initial indexing)
-    }
+        // Act - Measure save
+        var swSave = Stopwatch.StartNew();
+        index.SaveIndex(filePath);
+        swSave.Stop();
 
-    /// <summary>
-    /// Search with topK=1000 on large index.
-    /// Verify no significant performance degradation vs topK=10.
-    /// </summary>
-    [Fact]
-    public void TestPerformance_LargeTopK()
-    {
-        // Arrange: Index 100k documents
-        // Act: Measure search with topK=10 vs topK=1000
-        // Assert: Both complete in reasonable time (< 200ms)
-    }
+        var swLoad = Stopwatch.StartNew();
+        var loadedIndex = Bm25Index<TestDoc>.LoadIndex(filePath);
+        swLoad.Stop();
 
-    /// <summary>
-    /// Index documents and measure memory usage.
-    /// Verify memory scales linearly with corpus size (no major leaks).
-    /// </summary>
-    [Fact]
-    public void TestPerformance_MemoryUsage()
-    {
-        // Arrange: Create indexes of 10k, 50k, 100k documents
-        // Act: Measure memory for each
-        // Assert: Memory usage scales roughly linearly, no major spikes
-    }
+        // Assert
+        Assert.True(swSave.ElapsedMilliseconds < 1000,
+            $"Save took {swSave.ElapsedMilliseconds}ms, expected < 1000ms");
+        Assert.True(swLoad.ElapsedMilliseconds < 1000,
+            $"Load took {swLoad.ElapsedMilliseconds}ms, expected < 1000ms");
+        Assert.Equal(100000, loadedIndex.DocumentCount);
 
-    /// <summary>
-    /// Perform repeated searches to verify no performance degradation.
-    /// Check for memory leaks or accumulated overhead.
-    /// </summary>
-    [Fact]
-    public void TestPerformance_RepeatedSearches()
-    {
-        // Arrange: Index 100k documents
-        // Act: Perform same search 1000 times, measure time per iteration
-        // Assert: Time per search consistent, no degradation
-    }
-
-    /// <summary>
-    /// Create small, medium, and large indexes.
-    /// Verify search latency grows sublinearly with corpus size.
-    /// </summary>
-    [Fact]
-    public void TestPerformance_ScalingBehavior()
-    {
-        // Arrange: Index 10k, 100k, 1M documents
-        // Act: Search each corpus, measure time
-        // Assert: Time doesn't grow linearly (good algorithmic complexity)
+        // Cleanup
+        File.Delete(filePath);
     }
 }

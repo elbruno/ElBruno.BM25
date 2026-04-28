@@ -1,0 +1,21 @@
+{
+  "version": "v1",
+  "tokenizer": "Simple",
+  "parameters": {
+    "k1": 1.5,
+    "b": 0.75,
+    "delta": 0.5,
+    "avgDocLength": 1.5
+  },
+  "invertedIndex": {
+    "query": {
+      "0": 2,
+      "1": 1
+    }
+  },
+  "docLengths": {
+    "0": 2,
+    "1": 1
+  },
+  "idfCache": {}
+}

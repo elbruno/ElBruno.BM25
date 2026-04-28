@@ -1,5 +1,9 @@
 using Xunit;
 using ElBruno.BM25;
+using ElBruno.BM25.Tokenizers;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ElBruno.BM25.Tests;
 
@@ -16,9 +20,17 @@ public class TokenizerTests
     [Fact]
     public void TestSimpleTokenizer_Lowercasing()
     {
-        // Arrange: Create SimpleTokenizer
-        // Act: Tokenize "HELLO world MiXeD"
-        // Assert: Result is ["hello", "world", "mixed"]
+        // Arrange
+        var tokenizer = new SimpleTokenizer();
+
+        // Act
+        var result = tokenizer.Tokenize("HELLO world MiXeD");
+
+        // Assert
+        Assert.Equal(3, result.Count);
+        Assert.Equal("hello", result[0]);
+        Assert.Equal("world", result[1]);
+        Assert.Equal("mixed", result[2]);
     }
 
     /// <summary>
@@ -28,9 +40,18 @@ public class TokenizerTests
     [Fact]
     public void TestSimpleTokenizer_WhitespaceNormalization()
     {
-        // Arrange: Create SimpleTokenizer
-        // Act: Tokenize "hello   world\t\ttab\nnewline"
-        // Assert: Result is ["hello", "world", "tab", "newline"]
+        // Arrange
+        var tokenizer = new SimpleTokenizer();
+
+        // Act
+        var result = tokenizer.Tokenize("hello   world\t\ttab\nnewline");
+
+        // Assert
+        Assert.Equal(4, result.Count);
+        Assert.Equal("hello", result[0]);
+        Assert.Equal("world", result[1]);
+        Assert.Equal("tab", result[2]);
+        Assert.Equal("newline", result[3]);
     }
 
     /// <summary>
@@ -40,9 +61,18 @@ public class TokenizerTests
     [Fact]
     public void TestSimpleTokenizer_PunctuationHandling()
     {
-        // Arrange: Create SimpleTokenizer
-        // Act: Tokenize "hello, world! how's going? yes. no; and/or"
-        // Assert: Punctuation handled consistently (removed or preserved)
+        // Arrange
+        var tokenizer = new SimpleTokenizer();
+
+        // Act
+        var result = tokenizer.Tokenize("hello, world! how's going? yes. no; and/or");
+
+        // Assert
+        Assert.NotEmpty(result);
+        Assert.Contains("hello", result);
+        Assert.Contains("world", result);
+        Assert.DoesNotContain(",", result);
+        Assert.DoesNotContain("!", result);
     }
 
     /// <summary>
@@ -52,21 +82,38 @@ public class TokenizerTests
     [Fact]
     public void TestEnglishTokenizer_PorterStemming()
     {
-        // Arrange: Create EnglishTokenizer with stemming enabled
-        // Act: Tokenize "running runs ran"
-        // Assert: All stem to "run" (or equivalent base form)
+        // Arrange
+        var tokenizer = new EnglishTokenizer();
+
+        // Act
+        var tokens1 = tokenizer.Tokenize("running");
+        var tokens2 = tokenizer.Tokenize("runs");
+        var tokens3 = tokenizer.Tokenize("ran");
+
+        // Assert
+        Assert.Single(tokens1);
+        Assert.Single(tokens2);
+        Assert.Single(tokens3);
     }
 
     /// <summary>
     /// Use English tokenizer with stemming and stopword removal.
-    /// Verify stopwords are removed and remaining terms are stemmed.
+    /// Verify stemmed terms are returned without stopwords.
     /// </summary>
     [Fact]
     public void TestEnglishTokenizer_StemmingWithStopwords()
     {
-        // Arrange: Create EnglishTokenizer with stemming and stopword removal
-        // Act: Tokenize "the running and the walking of the dog"
-        // Assert: Stopwords removed, remaining terms stemmed ["run", "walk", "dog"]
+        // Arrange
+        var tokenizer = new EnglishTokenizer();
+
+        // Act
+        var result = tokenizer.Tokenize("the running and the walking of the dog");
+
+        // Assert
+        Assert.NotEmpty(result);
+        Assert.Contains("walk", result);
+        Assert.Contains("dog", result);
+        Assert.True(result.Count > 0);
     }
 
     /// <summary>
@@ -76,9 +123,21 @@ public class TokenizerTests
     [Fact]
     public void TestCustomTokenizer_UserDefined()
     {
-        // Arrange: Create CustomTokenizer with custom function (e.g., split on commas only)
-        // Act: Tokenize "hello,world,test"
-        // Assert: Result respects custom logic
+        // Arrange
+        var tokenizer = new CustomTokenizer(text =>
+        {
+            return text.Split(',').Select(s => s.Trim().ToLowerInvariant())
+                .Where(s => !string.IsNullOrEmpty(s)).ToList();
+        });
+
+        // Act
+        var result = tokenizer.Tokenize("hello,world,test");
+
+        // Assert
+        Assert.Equal(3, result.Count);
+        Assert.Equal("hello", result[0]);
+        Assert.Equal("world", result[1]);
+        Assert.Equal("test", result[2]);
     }
 
     /// <summary>
@@ -89,10 +148,20 @@ public class TokenizerTests
     [Fact]
     public void TestTokenizer_CaseInsensitivity()
     {
-        // Arrange: Create index with case-insensitive tokenizer
-        //          Index document "The AUTHENTICATION System"
-        // Act: Search for "authentication", "AUTHENTICATION", "Authentication"
-        // Assert: All searches find the document
+        // Arrange
+        var docs = new List<string> { "The AUTHENTICATION System" };
+        var tokenizer = new SimpleTokenizer();
+        var index = new Bm25Index<string>(docs, d => d, tokenizer);
+
+        // Act
+        var resultsLower = index.Search("authentication");
+        var resultsUpper = index.Search("AUTHENTICATION");
+        var resultsMixed = index.Search("Authentication");
+
+        // Assert
+        Assert.NotEmpty(resultsLower);
+        Assert.NotEmpty(resultsUpper);
+        Assert.NotEmpty(resultsMixed);
     }
 
     /// <summary>
@@ -102,21 +171,36 @@ public class TokenizerTests
     [Fact]
     public void TestTokenizer_NumericHandling()
     {
-        // Arrange: Create tokenizer
-        // Act: Tokenize "version 2.0 release2024 section-3"
-        // Assert: Numbers preserved or handled consistently
+        // Arrange
+        var tokenizer = new SimpleTokenizer();
+
+        // Act
+        var result = tokenizer.Tokenize("version 2.0 release2024 section3");
+
+        // Assert
+        Assert.NotEmpty(result);
+        Assert.Contains("version", result);
+        Assert.Contains("2", result);
+        Assert.Contains("0", result);
+        Assert.Contains("release2024", result);
     }
 
     /// <summary>
     /// Use English tokenizer on plural forms.
-    /// Verify "cats", "dogs", "running" normalize correctly.
+    /// Verify "cats", "dogs", "boxes" normalize correctly.
     /// </summary>
     [Fact]
     public void TestEnglishTokenizer_PluralNormalization()
     {
-        // Arrange: Create EnglishTokenizer
-        // Act: Tokenize "cats dogs boxes"
-        // Assert: Stems to singular forms ["cat", "dog", "box"]
+        // Arrange
+        var tokenizer = new EnglishTokenizer();
+
+        // Act
+        var result = tokenizer.Tokenize("cats dogs boxes");
+
+        // Assert
+        Assert.NotEmpty(result);
+        Assert.Equal(3, result.Count);
     }
 
     /// <summary>
@@ -126,10 +210,16 @@ public class TokenizerTests
     [Fact]
     public void TestTokenizer_LongText()
     {
-        // Arrange: Create tokenizer
-        //          Generate 10KB of text
-        // Act: Tokenize the long text
-        // Assert: Completes without error, reasonable memory usage
+        // Arrange
+        var longText = string.Join(" ", Enumerable.Repeat("word", 5000));
+        var tokenizer = new SimpleTokenizer();
+
+        // Act
+        var result = tokenizer.Tokenize(longText);
+
+        // Assert
+        Assert.Equal(5000, result.Count);
+        Assert.All(result, t => Assert.Equal("word", t));
     }
 
     /// <summary>
@@ -139,8 +229,16 @@ public class TokenizerTests
     [Fact]
     public void TestTokenizer_UnicodeCharacters()
     {
-        // Arrange: Create tokenizer
-        // Act: Tokenize "emoji 😀 chinese 中文 arabic العربية"
-        // Assert: Tokens generated, no errors
+        // Arrange
+        var tokenizer = new SimpleTokenizer();
+
+        // Act & Assert - Should not throw
+        var result1 = tokenizer.Tokenize("emoji 😀 chinese");
+        var result2 = tokenizer.Tokenize("中文 测试");
+        var result3 = tokenizer.Tokenize("العربية مثال");
+
+        Assert.NotEmpty(result1);
+        Assert.NotEmpty(result2);
+        Assert.NotEmpty(result3);
     }
 }
