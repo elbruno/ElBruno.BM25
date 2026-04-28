@@ -6,13 +6,15 @@ How to decide who handles what.
 
 | Work Type | Route To | Examples |
 |-----------|----------|----------|
-| {domain 1} | {Name} | {example tasks} |
-| {domain 2} | {Name} | {example tasks} |
-| {domain 3} | {Name} | {example tasks} |
-| Code review | {Name} | Review PRs, check quality, suggest improvements |
-| Testing | {Name} | Write tests, find edge cases, verify fixes |
-| Scope & priorities | {Name} | What to build next, trade-offs, decisions |
-| Session logging | Scribe | Automatic — never needs routing |
+| API design, architecture decisions | Paul Atreides | BM25Index<T> design, tokenizer interface, persistence strategy |
+| Core implementation | Gurney Halleck | BM25 scoring, IDF calculation, tokenizers, index ops |
+| Performance optimization | Gurney Halleck | Algorithm optimization, memory efficiency, benchmarking |
+| Unit tests, QA | Chani | Test cases, edge cases, performance validation, approval |
+| Code review & quality gate | Chani | Approve implementations for test readiness, reject if gaps exist |
+| Documentation, examples | Thufir Hawat | README, API docs, guides, getting started, examples |
+| Promotional assets | Thufir Hawat | NuGet description, social content, announcements |
+| Session logging, decisions | Scribe | Automatic — never needs routing |
+| Work queue monitoring | Ralph | Monitor GitHub issues, keep board moving, status checks |
 
 ## Issue Routing
 

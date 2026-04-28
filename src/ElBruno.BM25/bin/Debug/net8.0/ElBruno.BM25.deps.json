@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "ElBruno.BM25/0.5.0": {
+        "runtime": {
+          "ElBruno.BM25.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "ElBruno.BM25/0.5.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

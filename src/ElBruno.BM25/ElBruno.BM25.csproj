@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
+    <Version>0.5.0</Version>
+    <Authors>Bruno Capuano</Authors>
+    <Description>Lightweight, zero-dependency BM25 full-text search for .NET</Description>
+    <PackageProjectUrl>https://github.com/ElBruno/ElBruno.BM25</PackageProjectUrl>
+    <License>MIT</License>
+    <RepositoryUrl>https://github.com/ElBruno/ElBruno.BM25</RepositoryUrl>
+    <PackageTags>bm25;full-text-search;information-retrieval;nlp;ai</PackageTags>
+    <PackageId>ElBruno.BM25</PackageId>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!-- No external dependencies - pure C# implementation -->
+</Project>

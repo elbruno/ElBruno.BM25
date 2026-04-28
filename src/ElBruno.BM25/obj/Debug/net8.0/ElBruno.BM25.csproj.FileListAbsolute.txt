@@ -1,0 +1,13 @@
+C:\src\ElBruno.BM25\src\ElBruno.BM25\bin\Debug\net8.0\ElBruno.BM25.deps.json
+C:\src\ElBruno.BM25\src\ElBruno.BM25\bin\Debug\net8.0\ElBruno.BM25.dll
+C:\src\ElBruno.BM25\src\ElBruno.BM25\bin\Debug\net8.0\ElBruno.BM25.pdb
+C:\src\ElBruno.BM25\src\ElBruno.BM25\bin\Debug\net8.0\ElBruno.BM25.xml
+C:\src\ElBruno.BM25\src\ElBruno.BM25\obj\Debug\net8.0\ElBruno.BM25.GeneratedMSBuildEditorConfig.editorconfig
+C:\src\ElBruno.BM25\src\ElBruno.BM25\obj\Debug\net8.0\ElBruno.BM25.AssemblyInfoInputs.cache
+C:\src\ElBruno.BM25\src\ElBruno.BM25\obj\Debug\net8.0\ElBruno.BM25.AssemblyInfo.cs
+C:\src\ElBruno.BM25\src\ElBruno.BM25\obj\Debug\net8.0\ElBruno.BM25.csproj.CoreCompileInputs.cache
+C:\src\ElBruno.BM25\src\ElBruno.BM25\obj\Debug\net8.0\ElBruno.BM25.dll
+C:\src\ElBruno.BM25\src\ElBruno.BM25\obj\Debug\net8.0\refint\ElBruno.BM25.dll
+C:\src\ElBruno.BM25\src\ElBruno.BM25\obj\Debug\net8.0\ElBruno.BM25.xml
+C:\src\ElBruno.BM25\src\ElBruno.BM25\obj\Debug\net8.0\ElBruno.BM25.pdb
+C:\src\ElBruno.BM25\src\ElBruno.BM25\obj\Debug\net8.0\ref\ElBruno.BM25.dll
