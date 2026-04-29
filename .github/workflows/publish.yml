@@ -28,7 +28,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const token = await core.getIDToken('https://api.nuget.org');
+            const token = await core.getIDToken('https://api.nuget.org/v3/index.json');
             core.setOutput('token', token);
       - name: Publish to NuGet
         run: dotnet nuget push nupkg/ElBruno.BM25.*.nupkg --api-key "${{ steps.oidc.outputs.token }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
