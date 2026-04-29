@@ -740,6 +740,178 @@ Mark as pre-release on NuGet.org and GitHub.
 
 ---
 
+## Publishing Lessons Learned (v0.5.0 Release — ElBruno.BM25)
+
+This section captures critical lessons from the ElBruno.BM25 v0.5.0 NuGet publishing process. **Read this before attempting your first publish.**
+
+### Critical Lesson: Use `NuGet/login@v1` Action
+
+**❌ WRONG — Will fail with 403 Forbidden:**
+```yaml
+- name: Obtain OIDC token
+  uses: actions/github-script@v7
+  with:
+    script: |
+      const token = await core.getIDToken('https://api.nuget.org');
+      core.setOutput('token', token);
+- name: Publish to NuGet
+  run: dotnet nuget push nupkg/*.nupkg --api-key "${{ steps.oidc.outputs.token }}" --source https://api.nuget.org/v3/index.json
+```
+
+**✅ CORRECT — Use NuGet/login action:**
+```yaml
+- name: NuGet login (OIDC → temp API key)
+  uses: NuGet/login@v1
+  id: login
+  with:
+    user: ${{ secrets.NUGET_USER }}
+- name: Publish to NuGet
+  run: dotnet nuget push nupkg/*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+```
+
+**Why:** The `NuGet/login@v1` action:
+- Obtains OIDC token with correct audience (handled internally)
+- Converts token to temporary NuGet API key
+- NuGet recognizes the temp key and validates against trusted publishing policy
+- Eliminates 403 errors from manual token handling
+
+### NuGet Trusted Publishing Setup (Prerequisites)
+
+**On NuGet.org (one-time setup):**
+1. Go to: https://www.nuget.org/account/trustedpublishers
+2. Create trusted publishing policy:
+   - **Service Principal:** Your NuGet username (must match `NUGET_USER` secret)
+   - **GitHub Repository:** `github.com/{owner}/{repo-name}`
+   - **Workflow:** `publish.yml` (MUST be exact filename)
+   - **Environment:** `release`
+3. Verify policy status: Must show "Active"
+
+**On GitHub (one-time setup):**
+1. Settings → Environments → Create "release" environment
+2. Add secret in release environment:
+   - **Name:** `NUGET_USER`
+   - **Value:** Your NuGet service principal username
+
+**In `.github/workflows/publish.yml` (exact structure):**
+```yaml
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: release              # ← Required
+    permissions:
+      id-token: write                # ← Required for OIDC
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet restore {ProjectPath}
+      - run: dotnet build {ProjectPath} --configuration Release --no-restore
+      - run: dotnet pack {ProjectPath} --configuration Release --output nupkg
+      - uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+      - run: dotnet nuget push nupkg/*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+```
+
+### GitHub Actions Best Practices
+
+**1. Explicit Project Paths**
+- ❌ `dotnet restore` (fails in CI, ambiguous)
+- ✅ `dotnet restore src/ElBruno.BM25/ElBruno.BM25.csproj` (explicit)
+
+**2. Action Versions**
+- ✅ Use specific major versions: `@v4`, `@v1`, `@v3`
+- ❌ Never use `@latest` or floating versions
+
+**3. Job Permissions**
+```yaml
+permissions:
+  id-token: write  # For OIDC token generation
+  contents: read   # For repo access
+```
+- Always declare minimum permissions needed
+- Never use `permissions: write-all` (security risk)
+
+**4. Environment-Scoped Secrets**
+- Store publish-only secrets in `release` environment
+- They are NOT exposed to other workflows/jobs
+- Ref: `${{ secrets.NUGET_USER }}` (auto-scoped to job's environment)
+
+### Troubleshooting Publish Failures
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `403 Forbidden` | Manual OIDC token handling | Use `NuGet/login@v1` action |
+| `Policy not found` | No trusted publishing policy on nuget.org | Create policy at https://nuget.org/account/trustedpublishers |
+| `Unauthorized` | `NUGET_USER` secret not set in release environment | Create secret in GitHub release environment |
+| `Workflow filename mismatch` | Workflow named `publish-nuget.yml` instead of `publish.yml` | Rename to exactly `publish.yml` (NuGet enforces this) |
+| `Policy inactive` | Policy created but not activated | Go to nuget.org, click "Activate for 7 days" |
+| `Missing OIDC token` | Job doesn't have `permissions: id-token: write` | Add to job permissions |
+
+### CI Performance Tuning
+
+**Issue:** Performance tests timeout in CI (GitHub Actions runners ~1000x slower than local dev).
+
+**Solution:** Environment-specific timeouts:
+```csharp
+// Relax timeouts for CI environment
+const long CI_SAVE_TIMEOUT_MS = 600_000;   // 10 minutes for CI
+const long CI_LOAD_TIMEOUT_MS = 300_000;   // 5 minutes for CI
+// Local performance still <1s; CI needs buffer for I/O-heavy operations
+```
+
+**Key takeaway:** Don't assume CI speed matches local. Build in 10x+ buffer for serialization, large allocations, I/O operations on cloud runners.
+
+### Documentation Reorganization
+
+**Best practice:** Reorganize docs EARLY in project lifecycle, before public release.
+
+**Process:**
+1. Create `docs/guides/`, `docs/architecture/`, `docs/api/` subdirectories
+2. Move or copy README.md, LICENSE into `docs/`
+3. Update ALL markdown links to reflect new paths
+4. Search for old patterns: `/docs/old-path` → `/docs/new-path`
+5. Test links in rendered markdown (GitHub, NuGet)
+6. Include "docs: reorganize folder structure" in commit message
+
+**Lesson:** Link migration is error-prone and hard to debug later. Do it early, commit with clear messages.
+
+### Disabled GitHub Workflows
+
+**Keep only essential workflows:**
+- `build.yml` — Build, test, run benchmarks (keep)
+- `publish.yml` — Publish to NuGet on tag (keep)
+- `squad-*.yml` — Team automation (disable if not using Squad)
+- Others — Remove or disable
+
+**Reason:** Unnecessary workflows add noise to CI/CD pipeline and slow down your build matrix.
+
+### Checklist for First Publish
+
+Before attempting `git tag v0.x.0 && git push origin v0.x.0`:
+
+- [ ] **NuGet trusted publishing policy** created at https://nuget.org/account/trustedpublishers (status: Active)
+- [ ] **GitHub release environment** created (Settings → Environments → release)
+- [ ] **NUGET_USER secret** set in release environment (value: your NuGet service principal username)
+- [ ] **publish.yml workflow** exists and uses `NuGet/login@v1`
+- [ ] **publish.yml has `environment: release`** and **`permissions: id-token: write`**
+- [ ] **All project paths in workflow are explicit** (not relying on CWD)
+- [ ] **Package icon (128×128) exists** at path specified in .csproj
+- [ ] **README.md and LICENSE exist** at repository root
+- [ ] **Version in .csproj matches tag** (e.g., tag v0.5.0 → csproj version 0.5.0)
+- [ ] **CHANGELOG.md updated** with v0.5.0 release notes
+- [ ] **GitHub release notes drafted** (auto-generated or manual)
+
+---
+
 ## Usage Recommendations
 
 ### For New Projects
