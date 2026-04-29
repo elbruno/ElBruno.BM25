@@ -9,7 +9,7 @@
     <PackageProjectUrl>https://github.com/ElBruno/ElBruno.BM25</PackageProjectUrl>
     <PackageIcon>nuget-icon-128x128.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <License>MIT</License>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/ElBruno/ElBruno.BM25</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>bm25;search;full-text;information-retrieval;nlp;rag;hybrid-search;fts;text-search;ranking;ir</PackageTags>
