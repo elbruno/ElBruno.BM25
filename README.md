@@ -1,7 +1,7 @@
 # ElBruno.BM25 — Lightweight BM25 Full-Text Search for .NET
 
 ![License](https://img.shields.io/badge/license-MIT-green)
-![NuGet](https://img.shields.io/badge/nuget-0.5.0-blue)
+![NuGet](https://img.shields.io/badge/nuget-0.5.1-blue)
 ![.NET](https://img.shields.io/badge/.NET-8.0%2B-purple)
 
 **Production-ready BM25 full-text search library with zero external dependencies.** Index millions of documents, search in milliseconds, and integrate seamlessly into RAG pipelines, knowledge bases, and hybrid search systems.
@@ -418,6 +418,22 @@ dotnet test
 - Performance benchmarks
 - Edge cases (empty queries, large indexes, etc.)
 - Persistence and serialization
+
+---
+
+## 👋 About the Author
+
+Hi! I'm **ElBruno** 🧡, a passionate developer and content creator exploring AI, .NET, and modern development practices.
+
+**Made with ❤️ by [ElBruno](https://github.com/elbruno)**
+
+If you like this project, consider following my work across platforms:
+
+- 🔗 **Blog**: [ElBruno.com](https://elbruno.com) — Deep dives on embeddings, RAG, .NET, and local AI
+- 💻 **YouTube**: [youtube.com/elbruno](https://www.youtube.com/elbruno) — Demos, tutorials, and live coding
+- 📺 **LinkedIn**: [@elbruno](https://www.linkedin.com/in/elbruno/) — Professional updates and insights
+- 𝕏 **Twitter**: [@elbruno](https://www.x.com/elbruno/) — Quick tips, releases, and tech news
+- 📻 **Podcast**: [No Tienen Nombre](https://notienenombre.com) — Spanish-language episodes on AI, development, and tech culture
 
 ---
 

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.5.1] - 2026-07-04
+
+### Changed
+
+#### Documentation
+- Added the standard `About the Author` section to the package README before the License section
+- Updated package metadata for the 0.5.1 NuGet release
+
+---
+
 ## [0.5.0] - 2026-04-28
 
 ### Added
